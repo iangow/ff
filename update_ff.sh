@@ -8,5 +8,3 @@ Rscript get_ff_factors_monthly.R
 Rscript import_be_beme.R
 Rscript get_ff_port_rets_monthly.R
 Rscript get_ff_port_rets.R
-
-psql < pg/permissions.sql
