@@ -89,7 +89,7 @@ get_ind_return_data <- function(ind) {
     tab_nam <- paste0("ff_ind", ind, "_mo")
     rs <- dbWriteTable(pg, c("ff", tab_nam), ff_ind,
                        overwrite=TRUE, row.names=FALSE)
-    rs <- dbGetQuery(pg, paste0("GRANT SELECT ON ff.", tab_nam, " TO crsp_basic"))
+    rs <- dbGetQuery(pg, paste0("GRANT SELECT ON ff.", tab_nam, " TO ff_access"))
 
     sql <- paste0("
         COMMENT ON TABLE ff.", tab_nam, " IS
@@ -99,6 +99,9 @@ get_ind_return_data <- function(ind) {
     rs <- dbGetQuery(pg, paste0("CREATE INDEX ON ff.", tab_nam, " (ind_num)"))
     rs <- dbGetQuery(pg, paste0("VACUUM ff.", tab_nam))
 
+    dbExecute(pg, paste0("ALTER TABLE ff.", tab_nam, " OWNER TO ff"))
+    dbExecute(pg, paste0("GRANT SELECT ON ff.", tab_nam, " TO ff_access"))
+    
     dbDisconnect(pg)
 }
 

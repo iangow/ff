@@ -48,6 +48,8 @@ sql <- paste0("
     'CREATED USING import_be_beme.R ON ", Sys.time() , "';")
 rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
 
+dbExecute(pg, "ALTER TABLE ff.beme OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.beme TO ff_access")
 rs <- dbGetQuery(pg, "VACUUM ff.beme")
 
 ################################################################################
@@ -80,6 +82,8 @@ sql <- paste0("
     'CREATED USING import_be_beme.R ON ", Sys.time() , "';")
 rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
 
+dbExecute(pg, "ALTER TABLE ff.me OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.me TO ff_access")
 rs <- dbGetQuery(pg, "VACUUM ff.me")
 
 ff_me_quintiles <- ff_me[,c("year", "month", paste("p", seq(2,10,2), "0", sep=""))]
@@ -99,6 +103,8 @@ sql <- paste0("
     'CREATED USING import_be_beme.R ON ", Sys.time() , "';")
 rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
 
+dbExecute(pg, "ALTER TABLE ff.me_alt OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.me_alt TO ff_access")
 rs <- dbGetQuery(pg, "VACUUM ff.me_alt")
 
 # Rearrange the BEME data ----
@@ -110,12 +116,15 @@ names(ff_beme_alt) <- c("year", "quintile", "beme")
 ff_beme_alt$quintile <- as.integer(gsub("^p", "", ff_beme_alt$quintile))/20
 table(ff_beme_alt$quintile)
 
-rs <- dbWriteTable(pg,c("ff","beme_alt"), ff_beme_alt,
+rs <- dbWriteTable(pg,c("ff", "beme_alt"), ff_beme_alt,
                    overwrite=TRUE, row.names=FALSE)
 sql <- paste0("
     COMMENT ON TABLE ff.beme_alt IS
     'CREATED USING import_be_beme.R ON ", Sys.time() , "';")
 rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
+
+dbExecute(pg, "ALTER TABLE ff.beme_alt OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.beme_alt TO ff_access")
 
 rs <- dbGetQuery(pg, "VACUUM ff.beme_alt")
 

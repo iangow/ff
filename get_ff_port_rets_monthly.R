@@ -89,9 +89,11 @@ rs <- dbWriteTable(pg,c("ff","ff25_mo"), ff25,
 sql <- paste0("
     COMMENT ON TABLE ff.ff25_mo IS
     'CREATED USING get_ff_port_rets_monthly.R ON ", Sys.time() , "';")
-rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
+rs <- dbExecute(pg, paste(sql, collapse="\n"))
 
-rs <- dbGetQuery(pg, "VACUUM ff.ff25_mo")
+dbExecute(pg, "ALTER TABLE ff.ff25_mo OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.ff25_mo TO ff_access")
+rs <- dbExecute(pg, "VACUUM ff.ff25_mo")
 
 # dbGetQuery(pg, "CREATE SCHEMA ff")
 dbDisconnect(pg)

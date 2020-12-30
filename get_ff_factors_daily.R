@@ -70,13 +70,16 @@ ff_daily_factors <- subset(ff_daily_factors, subset=!is.na(date))
 ################################################################################
 library(RPostgreSQL)
 pg <- dbConnect(PostgreSQL())
-rs <- dbWriteTable(pg,c("ff","factors_daily"), ff_daily_factors,
+rs <- dbWriteTable(pg,c("ff","factors_daily_alt"), ff_daily_factors,
                    overwrite=TRUE, row.names=FALSE)
 
 sql <- paste0("
-    COMMENT ON TABLE ff.factors_daily IS
-    'CREATED USING get_ff_factors_daily.R ON ", Sys.time() , "';")
+    COMMENT ON TABLE ff.factors_daily_alt IS
+    'CREATED USING get_ff_factors_daily_alt.R ON ", Sys.time() , "';")
 rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
 
-rs <- dbGetQuery(pg, "VACUUM ff.factors_daily")
+dbExecute(pg, "ALTER TABLE ff.factors_daily_alt OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.factors_daily_alt TO ff_access")
+
+rs <- dbGetQuery(pg, "VACUUM ff.factors_daily_alt")
 rs <- dbDisconnect(pg)

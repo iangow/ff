@@ -83,13 +83,15 @@ ff_monthly_factors <- subset(ff_monthly_factors, subset=!is.na(date))
 ################################################################################
 library(RPostgreSQL)
 pg <- dbConnect(PostgreSQL())
-rs <- dbWriteTable(pg,c("ff","factors_monthly"), ff_monthly_factors,
+rs <- dbWriteTable(pg,c("ff","factors_monthly_alt"), ff_monthly_factors,
                    overwrite=TRUE, row.names=FALSE)
 
 sql <- paste0("
-    COMMENT ON TABLE ff.factors_monthly IS
-    'CREATED USING get_ff_factors_monthly.R ON ", Sys.time() , "';")
-rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
+    COMMENT ON TABLE ff.factors_monthly_alt IS
+    'CREATED USING get_ff_factors_monthly_alt.R ON ", Sys.time() , "';")
+rs <- dbExecute(pg, paste(sql, collapse="\n"))
 
-rs <- dbGetQuery(pg, "VACUUM ff.factors_monthly")
+dbExecute(pg, "ALTER TABLE ff.factors_monthly_alt OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.factors_monthly_alt TO ff_access")
+rs <- dbExecute(pg, "VACUUM ff.factors_monthly_alt")
 rs <- dbDisconnect(pg)

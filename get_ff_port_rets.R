@@ -85,4 +85,15 @@ library(RPostgreSQL)
 pg <- dbConnect(PostgreSQL()) 
 rs <- dbWriteTable(pg, c("ff", "ff25"), ff25, 
                    overwrite=TRUE, row.names=FALSE)
+
+sql <- paste0("
+    COMMENT ON TABLE ff.ff25 IS
+    'CREATED USING get_ff_port_rets.R ON ", Sys.time() , "';")
+rs <- dbExecute(pg, paste(sql, collapse="\n"))
+
+dbExecute(pg, "ALTER TABLE ff.ff25 OWNER TO ff")
+dbExecute(pg, "GRANT SELECT ON ff.ff25 TO ff_access")
+rs <- dbExecute(pg, "VACUUM ff.ff25")
+
+
 rs <- dbDisconnect(pg)
