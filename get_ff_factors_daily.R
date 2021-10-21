@@ -33,7 +33,7 @@ ff_daily_factors <-
                                         c("date", "mktrf", "smb", "hml", "rf")),
              col_types = "c") %>%
   filter(grepl("^[0-9]+$", date)) %>%
-  mutate_at(c("mktrf", "smb", "hml", "rf"), ~ as.double(.x)/100) %>%
+  mutate_at(c("mktrf", "smb", "hml", "rf"), ~ round(as.double(.x)/100, 7)) %>%
   mutate(date = ymd(date))
 
 ################################################################################
@@ -53,7 +53,7 @@ ff_mom_factor <-
                                       c("date", "umd")),
            col_types = "c") %>%
   filter(grepl("^[0-9]+$", date)) %>%
-  mutate_at("umd", ~ as.double(.x)/100) %>%
+  mutate_at("umd", ~ round(as.double(.x)/100, 7)) %>%
   mutate(date = ymd(date))
   
 ################################################################################
