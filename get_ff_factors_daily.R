@@ -3,6 +3,10 @@
 # The idea is to make a table that could be used for SQL merges.
 ########################################################################
 
+library(dplyr, warn.conflicts = FALSE)
+library(readr)
+library(lubridate)
+
 # The URL for the data.
 ff.url.partial <- paste("http://mba.tuck.dartmouth.edu",
                         "pages/faculty/ken.french/ftp", sep="/")
@@ -21,65 +25,61 @@ trim <- function(string) {
 ff.url <- paste(ff.url.partial, "F-F_Research_Data_Factors_daily_TXT.zip", sep="/")
 f <- tempfile()
 download.file(ff.url, f)
-file.list <- unzip(f, list=TRUE)
-z <- unzip(f, files=as.character(file.list[1,1]))
+
 # Parse the data
 ff_daily_factors <-
-    read.fwf(z,
-             widths=c(8,8,8,8,10), header=FALSE,
-             stringsAsFactors=FALSE, skip=5)
-unlink(z)
-
-# Clean the data
-for (i in 2:5) ff_daily_factors[,i] <- as.numeric(trim(ff_daily_factors[,i]))
-for (i in 2:4) ff_daily_factors[,i] <- ff_daily_factors[,i]/100
-names(ff_daily_factors) <- c("date", "mktrf", "smb", "hml", "rf")
-ff_daily_factors$date <- as.Date(ff_daily_factors$date, format="%Y%m%d")
+    read_fwf(f,
+             col_positions = fwf_widths(c(8, 8, 8, 8, 10),
+                                        c("date", "mktrf", "smb", "hml", "rf")),
+             col_types = "c") %>%
+  filter(grepl("^[0-9]+$", date)) %>%
+  mutate_at(c("mktrf", "smb", "hml", "rf"), ~ as.double(.x)/100) %>%
+  mutate(date = ymd(date))
 
 ################################################################################
 #               Now download UMD (momentum) factor data                        #
 ################################################################################
 
 
-# Download the data and unzip it
+# Download the data
 ff.url <- paste(ff.url.partial, "F-F_Momentum_Factor_daily_TXT.zip", sep="/")
 f <- tempfile()
 download.file(ff.url, f)
-file.list <- unzip(f, list=TRUE)
 
 # Parse the data
 ff_mom_factor <-
-    read.fwf(unzip(f, files=as.character(file.list[1,1])),
-             widths=c(8,8), header=FALSE,
-             stringsAsFactors=FALSE, skip=14)
-unlink(file.list[1,1])
-# Clean the data
-ff_mom_factor[,2] <- as.numeric(trim(ff_mom_factor[,2]))/100
-names(ff_mom_factor) <- c("date", "umd")
-ff_mom_factor$date <- as.Date(ff_mom_factor$date, format="%Y%m%d")
-
+  read_fwf(f,
+           col_positions = fwf_widths(c(8, 8),
+                                      c("date", "umd")),
+           col_types = "c") %>%
+  filter(grepl("^[0-9]+$", date)) %>%
+  mutate_at("umd", ~ as.double(.x)/100) %>%
+  mutate(date = ymd(date))
+  
 ################################################################################
 #                        Merge all the factor data                             #
 ################################################################################
 ff_daily_factors <-
-    merge(ff_daily_factors, ff_mom_factor, by="date", all.x=TRUE)
-ff_daily_factors <- subset(ff_daily_factors, subset=!is.na(date))
+  ff_daily_factors %>%
+  left_join(ff_mom_factor, by="date")
 
 ################################################################################
 #                      Load the data into my database                          #
 ################################################################################
-library(RPostgreSQL)
-pg <- dbConnect(PostgreSQL())
-rs <- dbWriteTable(pg,c("ff","factors_daily_alt"), ff_daily_factors,
+library(DBI)
+pg <- dbConnect(RPostgres::Postgres())
+rs <- dbExecute(pg, "SET search_path TO ff")
+rs <- dbWriteTable(pg, "factors_daily_alt", ff_daily_factors,
                    overwrite=TRUE, row.names=FALSE)
 
 sql <- paste0("
-    COMMENT ON TABLE ff.factors_daily_alt IS
+    COMMENT ON TABLE factors_daily_alt IS
     'CREATED USING get_ff_factors_daily_alt.R ON ", Sys.time() , "';")
-rs <- dbGetQuery(pg, paste(sql, collapse="\n"))
+rs <- dbExecute(pg, paste(sql, collapse="\n"))
 
-dbExecute(pg, "ALTER TABLE ff.factors_daily_alt OWNER TO ff")
-dbExecute(pg, "GRANT SELECT ON ff.factors_daily_alt TO ff_access")
+rs <- dbExecute(pg, "ALTER TABLE factors_daily_alt OWNER TO ff")
+rs <- dbExecute(pg, "GRANT SELECT ON factors_daily_alt TO ff_access")
 
-rs <- dbGetQuery(pg, "VACUUM ff.factors_daily_alt")
+rs <- dbExecute(pg, "VACUUM factors_daily_alt")
 rs <- dbDisconnect(pg)
+
