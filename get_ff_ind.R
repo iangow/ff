@@ -19,12 +19,11 @@ get_ff_ind <- function(num = 48) {
   download.file(url, t)
   
   ff_data <- 
-    readr::read_fwf(t, 
-                    col_positions = readr::fwf_widths(c(3, 7, NA),
-                                                      c("ff_ind", 
-                                                        "ff_ind_short_desc", 
-                                                        "sic_range")),
-                    col_types = "icc") %>%
+    read_fwf(t, 
+             col_positions = fwf_widths(c(3, 7, NA),
+                                        c("ff_ind", 
+                                          "ff_ind_short_desc", "sic_range")),
+             col_types = "icc") %>%
     mutate(ff_ind_desc = if_else(!is.na(ff_ind_short_desc), 
                                  sic_range, NA_character_)) %>%
     tidyr::fill(ff_ind, ff_ind_short_desc, ff_ind_desc) %>%
